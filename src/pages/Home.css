@@ -1,0 +1,59 @@
+.home-root {
+  background-color: #131712;
+  color: white;
+  font-family: 'Manrope', 'Noto Sans', sans-serif;
+  min-height: 100vh;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #2d372a;
+}
+.logo-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.logo svg {
+  width: 24px;
+  height: 24px;
+  color: white;
+}
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+.nav-links a {
+  color: white;
+  text-decoration: none;
+}
+.hero-section {
+  padding: 3rem 2rem;
+  display: flex;
+  justify-content: center;
+}
+.hero-content {
+  max-width: 960px;
+  text-align: center;
+}
+.hero-content h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+.hero-content h2 {
+  font-size: 1rem;
+  font-weight: 400;
+  margin-bottom: 2rem;
+}
+.hero-content button {
+  padding: 0.75rem 1.5rem;
+  background-color: #53d22c;
+  color: #131712;
+  border: none;
+  border-radius: 9999px;
+  font-weight: bold;
+  cursor: pointer;
+}
