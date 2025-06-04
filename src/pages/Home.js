@@ -1,7 +1,17 @@
-import React from 'react';
+import React,{ useState }from 'react';
 import './Home.css';
-
+import { FaUpload, FaMicrophone, FaHeadphones } from 'react-icons/fa';
 export default function Home() {
+
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [language, setLanguage] = useState('');
+  const [step, setStep] = useState(0);
+
+   const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    setSelectedFile(file);
+    setStep(1);
+  };
   return (
     <div className="home-root">
       <header className="header">
@@ -38,12 +48,60 @@ export default function Home() {
       </header>
 
       <main className="hero-section">
+        <div className="hero"></div>
         <div className="hero-content">
           <h1>Transform Your Reports with AI</h1>
           <h2>Upload your reports and let our AI voice assistant bring your data to life. Experience a new way to interact with and understand your information.</h2>
-          <button>Upload Report</button>
+             <input
+            type="file"
+            accept=".pdf,.xls,.xlsx,.csv"
+            style={{ display: 'none' }}
+            id="fileUpload"
+            onChange={handleFileChange}
+          />
+            <button onClick={() => document.getElementById('fileUpload').click()}>
+            Upload Report
+          </button>
+            <section className="formats-section">
+          <h2>Supported Formats</h2>
+          <div className="formats-grid">
+            <div className="format-card">
+              <span className="format-icon">📄</span>
+              <h3>PDF</h3>
+            </div>
+            <div className="format-card">
+              <span className="format-icon">📊</span>
+              <h3>EXCEL</h3>
+            </div>
+            <div className="format-card">
+              <span className="format-icon">📈</span>
+              <h3>CSV</h3>
+            </div>
+          </div>
+        </section>
         </div>
       </main>
+
+       <div className="how-it-works">
+      <h2 className="how-it-works-title">How it works?</h2>
+      <div className="steps-container">
+        <div className="step">
+          <FaUpload className="step-icon" />
+          <h3 className="step-title">Upload Report</h3>
+          <p className="step-description">Select and upload your PDF or Excel reports to get started.</p>
+        </div>
+        <div className="step">
+          <FaMicrophone className="step-icon" />
+          <h3 className="step-title">Choose Language</h3>
+          <p className="step-description">Pick a language for your voice narration from the available options.</p>
+        </div>
+        <div className="step">
+          <FaHeadphones className="step-icon" />
+          <h3 className="step-title">Listen to Summary</h3>
+          <p className="step-description">Let AI read out the key insights from your uploaded report.</p>
+        </div>
+      </div>
+    </div>
     </div>
   );
 }
