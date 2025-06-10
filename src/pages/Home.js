@@ -13,6 +13,8 @@ export default function Home() {
   const [languageCode, setLanguageCode] = useState("hi");
   const [audioUrl, setAudioUrl] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
 
   const extractTextFromPDF = async (file) => {
     return new Promise((resolve, reject) => {
@@ -92,29 +94,40 @@ export default function Home() {
     }
   };
 
-  const handleListenClick = async () => {
-    if (!extractedText) {
-      alert("Please upload a report first.");
-      return;
-    }
+ const handleListenClick = async () => {
+  if (!extractedText) {
+    alert("Please upload a report first.");
+    return;
+  }
 
-    try {
-      const res = await fetch("/synthesize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: extractedText, languageCode }),
-      });
+  setIsLoading(true); // Show loader at the start
 
-      if (!res.ok) throw new Error("Failed to generate speech");
+  try {
+    const res = await fetch("/synthesize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: extractedText, languageCode }),
+    });
 
-      const audioBlob = await res.blob();
-      const url = URL.createObjectURL(audioBlob);
-      setAudioUrl(url);
-      setShowModal(true);
-    } catch (error) {
-      alert("Error synthesizing speech: " + error.message);
-    }
-  };
+    if (!res.ok) throw new Error("Failed to generate speech");
+
+    const audioBlob = await res.blob();
+    const url = URL.createObjectURL(audioBlob);
+    setAudioUrl(url);
+    setShowModal(true);
+  } catch (error) {
+    alert("Error synthesizing speech: " + error.message);
+  } finally {
+    setIsLoading(false); // Hide loader when done
+  }
+};
+const handleCloseModal = () => {
+  setShowModal(false);
+  window.location.reload(); // Refresh the page
+};
+
+
+
   return (
     <div className="home-root">
       <header className="header">
@@ -172,6 +185,14 @@ export default function Home() {
                   <option value="es">Spanish</option>
                 </select>
               </div>
+                            {isLoading && (
+                  <div className="loader-overlay">
+                    <div className="loader-spinner"></div>
+                    <p className="loader-text">Generating Audio... Please wait.</p>
+                  </div>
+                )}
+
+
               <button style={{ marginTop: "10px" }} onClick={handleListenClick}>
                 Listen to Summary
               </button>
@@ -202,14 +223,17 @@ export default function Home() {
 
       {/* Modal Audio Player */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowModal(false)}><FaTimes /></button>
-            <h3>Audio Summary</h3>
-            <audio controls autoPlay src={audioUrl} onEnded={() => URL.revokeObjectURL(audioUrl)} />
-          </div>
-        </div>
-      )}
+  <div className="modal-overlay" onClick={() => setShowModal(false)}>
+    <div className="modal-content audio-player-container" onClick={(e) => e.stopPropagation()}>
+      <button className="modal-close" onClick={handleCloseModal}>&times;</button>
+      <h3>Audio Summary</h3>
+      <div className="custom-audio-player">
+        <audio controls className="styled-audio" autoPlay src={audioUrl} onEnded={() => URL.revokeObjectURL(audioUrl)} />
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
