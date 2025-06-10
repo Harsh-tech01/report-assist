@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './Home.css';
-import { FaUpload, FaMicrophone, FaHeadphones } from 'react-icons/fa';
+import { FaUpload, FaMicrophone, FaHeadphones, FaTimes } from 'react-icons/fa';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import * as XLSX from 'xlsx';
 
@@ -10,8 +10,9 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [step, setStep] = useState(0);
   const [extractedText, setExtractedText] = useState("");
-  const [languageCode, setLanguageCode] = useState("en"); // added for TTS language
-  const [audioUrl, setAudioUrl] = useState(null); // added for audio playback
+  const [languageCode, setLanguageCode] = useState("hi");
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   const extractTextFromPDF = async (file) => {
     return new Promise((resolve, reject) => {
@@ -67,7 +68,8 @@ export default function Home() {
 
     setSelectedFile(file);
     setStep(1);
-    setAudioUrl(null); // clear previous audio when new file uploaded
+    setAudioUrl(null);
+    setShowModal(false);
 
     const fileType = file.name.split('.').pop().toLowerCase();
     let text = '';
@@ -85,13 +87,11 @@ export default function Home() {
       }
 
       setExtractedText(text);
-      console.log("Extracted text:", text);
     } catch (error) {
       console.error("Error extracting text:", error);
     }
   };
 
-  // New handler to call your TTS backend
   const handleListenClick = async () => {
     if (!extractedText) {
       alert("Please upload a report first.");
@@ -110,11 +110,11 @@ export default function Home() {
       const audioBlob = await res.blob();
       const url = URL.createObjectURL(audioBlob);
       setAudioUrl(url);
+      setShowModal(true);
     } catch (error) {
       alert("Error synthesizing speech: " + error.message);
     }
   };
-
   return (
     <div className="home-root">
       <header className="header">
@@ -134,69 +134,58 @@ export default function Home() {
       </header>
 
       <main className="hero-section">
-        <div className="hero"></div>
         <div className="hero-content">
           <h1>Transform Your Reports with AI</h1>
           <h2>Upload your reports and let our AI voice assistant bring your data to life. Experience a new way to interact with and understand your information.</h2>
 
-          <input
-            type="file"
-            accept=".pdf,.xls,.xlsx,.csv"
-            style={{ display: 'none' }}
-            id="fileUpload"
-            onChange={handleFileChange}
-          />
-          <button onClick={() => document.getElementById('fileUpload').click()}>
-            Upload Report
-          </button>
+           <div className="upload-section">
+  {selectedFile && (
+    <div className="uploaded-file-name">
+      <strong>Uploaded File:</strong> {selectedFile.name}
+    </div>
+  )}
 
-          {/* Language selector for TTS */}
-          <div style={{ marginTop: "10px" }}>
-            <label htmlFor="languageSelect">Choose Language: </label>
-            <select
-              id="languageSelect"
-              value={languageCode}
-              onChange={(e) => setLanguageCode(e.target.value)}
-              style={{ marginLeft: "8px" }}
-            >
-              <option value="en">English</option>
-              <option value="hi">Hindi</option>
-              <option value="es">Spanish</option>
-              {/* Add more languages here */}
-            </select>
-          </div>
+  <input
+    type="file"
+    accept=".pdf,.xls,.xlsx,.csv"
+    style={{ display: 'none' }}
+    id="fileUpload"
+    onChange={handleFileChange}
+  />
+  <button onClick={() => document.getElementById('fileUpload').click()}>
+    Upload Report
+  </button>
+</div>
 
-          {/* Listen button */}
-          <button style={{ marginTop: "10px" }} onClick={handleListenClick}>
-            Listen to Summary
-          </button>
-
-          {/* Audio player for playback */}
-          {audioUrl && (
-            <audio
-              controls
-              autoPlay
-              src={audioUrl}
-              onEnded={() => URL.revokeObjectURL(audioUrl)}
-              style={{ marginTop: "10px", width: "100%" }}
-            />
+          {step === 1 && (
+            <>
+              <div style={{ marginTop: "10px" }}>
+                <label htmlFor="languageSelect">Choose Language: </label>
+                <select
+                  id="languageSelect"
+                  value={languageCode}
+                  onChange={(e) => setLanguageCode(e.target.value)}
+                  style={{ marginLeft: "8px" }}
+                >
+                  <option value="en">English</option>
+                  <option value="hi">Hindi</option>
+                  <option value="es">Spanish</option>
+                </select>
+              </div>
+              <button style={{ marginTop: "10px" }} onClick={handleListenClick}>
+                Listen to Summary
+              </button>
+            </>
           )}
+
+       
 
           <section className="formats-section">
             <h2>Supported Formats</h2>
             <div className="formats-grid">
-              <div className="format-card">
-                <span role="img" aria-label="PDF document" className="format-icon">📄</span>
-                <h3>PDF</h3>
-              </div>
-              <div className="format-card">
-                <span role="img" aria-label="Excel chart" className="format-icon">📊</span>
-                <h3>EXCEL</h3>
-              </div>
-              <div className="format-card">
-                <span role="img" aria-label="CSV chart" className="format-icon">📈</span>
-                <h3>CSV</h3>
-              </div>
+              <div className="format-card"><span className="format-icon">📄</span><h3>PDF</h3></div>
+              <div className="format-card"><span className="format-icon">📊</span><h3>EXCEL</h3></div>
+              <div className="format-card"><span className="format-icon">📈</span><h3>CSV</h3></div>
             </div>
           </section>
         </div>
@@ -205,23 +194,22 @@ export default function Home() {
       <div className="how-it-works">
         <h2 className="how-it-works-title">How it works?</h2>
         <div className="steps-container">
-          <div className="step">
-            <FaUpload className="step-icon" />
-            <h3 className="step-title">Upload Report</h3>
-            <p className="step-description">Select and upload your PDF or Excel reports to get started.</p>
-          </div>
-          <div className="step">
-            <FaMicrophone className="step-icon" />
-            <h3 className="step-title">Choose Language</h3>
-            <p className="step-description">Pick a language for your voice narration from the available options.</p>
-          </div>
-          <div className="step">
-            <FaHeadphones className="step-icon" />
-            <h3 className="step-title">Listen to Summary</h3>
-            <p className="step-description">Let AI read out the key insights from your uploaded report.</p>
-          </div>
+          <div className="step"><FaUpload className="step-icon" /><h3 className="step-title">Upload Report</h3><p className="step-description">Upload your PDF or Excel reports.</p></div>
+          <div className="step"><FaMicrophone className="step-icon" /><h3 className="step-title">Choose Language</h3><p className="step-description">Select your narration language.</p></div>
+          <div className="step"><FaHeadphones className="step-icon" /><h3 className="step-title">Listen</h3><p className="step-description">AI reads out key insights.</p></div>
         </div>
       </div>
+
+      {/* Modal Audio Player */}
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowModal(false)}><FaTimes /></button>
+            <h3>Audio Summary</h3>
+            <audio controls autoPlay src={audioUrl} onEnded={() => URL.revokeObjectURL(audioUrl)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
