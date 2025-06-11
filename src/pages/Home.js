@@ -10,7 +10,7 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [step, setStep] = useState(0);
   const [extractedText, setExtractedText] = useState("");
-  const [languageCode, setLanguageCode] = useState("hi");
+  const [languageCode, setLanguageCode] = useState("en");
   const [audioUrl, setAudioUrl] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,34 +65,50 @@ export default function Home() {
   };
 
   const handleFileChange = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const file = event.target.files[0];
+  if (!file) return;
 
-    setSelectedFile(file);
-    setStep(1);
-    setAudioUrl(null);
-    setShowModal(false);
+  setSelectedFile(file);
+  setStep(1);
+  setAudioUrl(null);
+  setShowModal(false);
 
-    const fileType = file.name.split('.').pop().toLowerCase();
-    let text = '';
+  const fileType = file.name.split('.').pop().toLowerCase();
+  let text = '';
 
-    try {
-      if (fileType === 'pdf') {
-        text = await extractTextFromPDF(file);
-      } else if (['xls', 'xlsx'].includes(fileType)) {
-        text = await extractTextFromExcel(file);
-      } else if (fileType === 'csv') {
-        text = await extractTextFromCSV(file);
-      } else {
-        alert('Unsupported file format');
-        return;
-      }
+  try {
+    // Upload file to Flask server
+    const formData = new FormData();
+    formData.append("file", file);
 
-      setExtractedText(text);
-    } catch (error) {
-      console.error("Error extracting text:", error);
+    const uploadRes = await fetch("/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const uploadData = await uploadRes.json();
+    if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
+
+    console.log("File uploaded:", uploadData.filename);
+
+    // Extract text based on file type
+    if (fileType === "pdf") {
+      text = await extractTextFromPDF(file);
+    } else if (["xls", "xlsx"].includes(fileType)) {
+      text = await extractTextFromExcel(file);
+    } else if (fileType === "csv") {
+      text = await extractTextFromCSV(file);
+    } else {
+      alert("Unsupported file format");
+      return;
     }
-  };
+
+    setExtractedText(text);
+  } catch (error) {
+    console.error("Error processing file:", error);
+    alert("Error handling the file: " + error.message);
+  }
+};
 
  const handleListenClick = async () => {
   if (!extractedText) {
@@ -197,9 +213,13 @@ const handleCloseModal = () => {
                   onChange={(e) => setLanguageCode(e.target.value)}
                   style={{ marginLeft: "8px" }}
                 >
-                  <option value="en">English</option>
-                  <option value="hi">Hindi</option>
-                  <option value="es">Spanish</option>
+                 <option value="en">English</option>
+  <option value="hi">Hindi</option>
+  <option value="es">Spanish</option>
+  <option value="fr">French</option>
+  <option value="de">German</option>
+  <option value="zh-CN">Chinese</option>
+  <option value="ar">Arabic</option>
                 </select>
               </div>
                             {isLoading && (
