@@ -8,6 +8,7 @@ import time
 from flask_cors import CORS
 
 app = Flask(__name__)
+<<<<<<< HEAD
 CORS(app)
 
 # Ensure 'audio' folder exists
@@ -49,12 +50,52 @@ def safe_chunk_for_tts(text, max_chars=500):
     return chunks
 
 def manage_file_storage():
+=======
+
+# Ensure 'audio' folder exists
+AUDIO_FOLDER = './audio'
+os.makedirs(AUDIO_FOLDER, exist_ok=True)
+
+UPLOAD_FOLDER = './uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+from flask_cors import CORS
+CORS(app)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "Invalid file"}), 400
+
+    # Generate unique filename and save file
+    filename = file.filename.strip()  # Removes accidental whitespace issues
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)  # Saves the exact file as uploaded
+
+    # Maintain only the latest 5 files
+    manage_file_storage()
+
+    return jsonify({"message": "File uploaded successfully", "filename": filename})
+
+def manage_file_storage():
+    """Keeps only the latest 5 files, deletes older ones."""
+>>>>>>> parent of d8f9501 (server capacity fixed)
     files = sorted(
         [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER)],
-        key=os.path.getmtime, reverse=True
+        key=os.path.getmtime,  # Sort by modification time (latest first)
+        reverse=True
     )
-    for old_file in files[5:]:
-        os.remove(old_file)
+
+    if len(files) > 5:
+        for old_file in files[5:]:  # Remove files beyond latest 5
+            os.remove(old_file)
+
+        
+translator = Translator()
 
 def cleanup_audio_folder(delay=5):
     def delete_files():
@@ -124,11 +165,15 @@ def synthesize():
     # Translate text before synthesis
     try:
 <<<<<<< HEAD
+<<<<<<< HEAD
         pre_chunks = chunk_text(text, max_chars=1000)
         translated_chunks = [
             translator.translate(chunk, dest=target_lang).text
             for chunk in pre_chunks
         ]
+=======
+        translated_text = translator.translate(text, dest=target_lang).text
+>>>>>>> parent of d8f9501 (server capacity fixed)
 =======
         translated_text = translator.translate(text, dest=target_lang).text
 >>>>>>> parent of d8f9501 (server capacity fixed)
@@ -139,6 +184,7 @@ def synthesize():
     filepath = os.path.join(AUDIO_FOLDER, filename)
 
     try:
+<<<<<<< HEAD
 <<<<<<< HEAD
         audio_chunks = []
         for t_chunk in translated_chunks:
@@ -171,6 +217,11 @@ def synthesize():
 
         return send_file(final_path, mimetype="audio/mpeg", as_attachment=True, download_name=final_filename)
 
+=======
+        tts = gTTS(text=translated_text, lang=target_lang)
+        tts.save(filepath)
+        return send_file(filepath, mimetype="audio/mpeg", as_attachment=True, download_name=filename)
+>>>>>>> parent of d8f9501 (server capacity fixed)
 =======
         tts = gTTS(text=translated_text, lang=target_lang)
         tts.save(filepath)
