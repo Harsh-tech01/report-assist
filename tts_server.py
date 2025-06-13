@@ -4,21 +4,24 @@ from googletrans import Translator
 from pydub import AudioSegment
 import os
 import uuid
+import threading
+import time
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 UPLOAD_FOLDER = './uploads'
 AUDIO_FOLDER = './audio'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(AUDIO_FOLDER, exist_ok=True)
 
-from flask_cors import CORS
-CORS(app)
-
 translator = Translator()
 
-def chunk_text(text, max_chars=10000):
-    """Split text into safe chunks for translation and TTS."""
+def chunk_text(text, max_chars=1000):
+    """
+    Original: Split text into chunks before translation
+    """
     lines = text.split('\n')
     chunks, current = [], ""
     for line in lines:
@@ -30,6 +33,41 @@ def chunk_text(text, max_chars=10000):
     if current:
         chunks.append(current.strip())
     return chunks
+
+def safe_chunk_for_tts(text, max_chars=500):
+    """
+    Split any text (post-translation) into gTTS-safe chunks (fallback for TTS).
+    """
+    chunks = []
+    while len(text) > max_chars:
+        cut_index = text.rfind(' ', 0, max_chars)
+        if cut_index == -1:
+            cut_index = max_chars
+        chunks.append(text[:cut_index].strip())
+        text = text[cut_index:].strip()
+    if text:
+        chunks.append(text.strip())
+    return chunks
+
+def manage_file_storage():
+    files = sorted(
+        [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER)],
+        key=os.path.getmtime, reverse=True
+    )
+    for old_file in files[5:]:
+        os.remove(old_file)
+
+def cleanup_audio_folder(delay=5):
+    def delete_files():
+        time.sleep(delay)
+        for f in os.listdir(AUDIO_FOLDER):
+            path = os.path.join(AUDIO_FOLDER, f)
+            try:
+                if os.path.isfile(path) and path.endswith(".mp3"):
+                    os.remove(path)
+            except Exception as e:
+                print(f"Failed to delete {path}: {e}")
+    threading.Thread(target=delete_files).start()
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -45,15 +83,6 @@ def upload_file():
     manage_file_storage()
     return jsonify({"message": "File uploaded successfully", "filename": filename})
 
-def manage_file_storage():
-    """Keep only the 5 most recent files."""
-    files = sorted(
-        [os.path.join(UPLOAD_FOLDER, f) for f in os.listdir(UPLOAD_FOLDER)],
-        key=os.path.getmtime, reverse=True
-    )
-    for old_file in files[5:]:
-        os.remove(old_file)
-
 @app.route('/synthesize', methods=['POST'])
 def synthesize():
     data = request.get_json()
@@ -64,26 +93,27 @@ def synthesize():
         return jsonify({"error": "Text is required"}), 400
 
     try:
-        translation_chunks = chunk_text(text)
+        pre_chunks = chunk_text(text, max_chars=1000)
         translated_chunks = [
             translator.translate(chunk, dest=target_lang).text
-            for chunk in translation_chunks
+            for chunk in pre_chunks
         ]
     except Exception as e:
         return jsonify({"error": f"Translation failed: {str(e)}"}), 500
 
     try:
         audio_chunks = []
-        for chunk in translated_chunks:
-            if not chunk.strip():
-                continue
-            try:
-                temp_filename = f"{uuid.uuid4()}.mp3"
-                temp_path = os.path.join(AUDIO_FOLDER, temp_filename)
-                gTTS(text=chunk.strip(), lang=target_lang).save(temp_path)
-                audio_chunks.append(temp_path)
-            except Exception as tts_error:
-                print(f"[WARN] TTS failed on a chunk: {tts_error}")
+        for t_chunk in translated_chunks:
+            for safe_chunk in safe_chunk_for_tts(t_chunk, max_chars=500):
+                if not safe_chunk.strip():
+                    continue
+                try:
+                    temp_filename = f"{uuid.uuid4()}.mp3"
+                    temp_path = os.path.join(AUDIO_FOLDER, temp_filename)
+                    gTTS(text=safe_chunk, lang=target_lang).save(temp_path)
+                    audio_chunks.append(temp_path)
+                except Exception as tts_error:
+                    print(f"[WARN] gTTS failed on chunk: {tts_error}")
 
         if not audio_chunks:
             return jsonify({"error": "No audio could be generated"}), 500
@@ -98,6 +128,8 @@ def synthesize():
 
         for path in audio_chunks:
             os.remove(path)
+
+        cleanup_audio_folder()
 
         return send_file(final_path, mimetype="audio/mpeg", as_attachment=True, download_name=final_filename)
 
