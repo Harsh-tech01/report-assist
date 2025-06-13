@@ -110,27 +110,22 @@ export default function Home() {
   }
 };
 
-const handleListenClick = async () => {
+ const handleListenClick = async () => {
   if (!extractedText) {
     alert("Please upload a report first.");
     return;
   }
 
-  setIsLoading(true);
+  setIsLoading(true); // Show loader at the start
+
   try {
     const res = await fetch("/synthesize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: extractedText,
-        languageCode,
-      }),
+      body: JSON.stringify({ text: extractedText, languageCode }),
     });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.error || "Failed to generate speech");
-    }
+    if (!res.ok) throw new Error("Failed to generate speech");
 
     const audioBlob = await res.blob();
     const url = URL.createObjectURL(audioBlob);
@@ -138,15 +133,10 @@ const handleListenClick = async () => {
     setShowModal(true);
   } catch (error) {
     alert("Error synthesizing speech: " + error.message);
-    console.error("TTS error:", error);
   } finally {
-    setIsLoading(false);
+    setIsLoading(false); // Hide loader when done
   }
 };
-
-
-
-
 const handleCloseModal = () => {
   setShowModal(false);
   window.location.reload(); // Refresh the page
