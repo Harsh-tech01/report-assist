@@ -2,7 +2,7 @@
 
 This project design is in a React application using standard CSS (no Tailwind).
 
-## Installation steps
+## Installation
 
 ```bash
 npm install
